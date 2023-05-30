@@ -124,6 +124,21 @@ def main(args):
     """ Model """
     model = build_model(config, len(class_names))
     model = model.to(device) # transfer the model to the device
+    print("Model Architecture: ", config.model)
+
+    # If Debug, set a hook for modules with an arbitrary debug attribute 
+    if config.debug:
+        def _save_output(module, grad_input, grad_output):
+            print("Module", module)
+            print("Input", grad_input)
+            print("Param:")
+            for param in module.named_parameters():
+                print(param)
+            print("Output", grad_output)
+        for module in model.modules():
+            condition = (isinstance(module, nn.LayerNorm) and hasattr(module, 'debug'))
+            if condition:
+                module.register_full_backward_hook(_save_output)
 
     summary_columns =[ "input_size", "output_size", "num_params", "params_percent", "kernel_size", "mult_adds", "trainable"]
     torchinfo.summary(model=model, input_size=(config.batch_size, 3, config.image_size, config.image_size), col_names=summary_columns)

@@ -108,12 +108,12 @@ class Experiment(object):
 
             ts = time.time()
 
-            train_loss_at_epoch, train_acc_at_epoch, train_iou_at_epoch = self.train(epoch)
+            train_loss_at_epoch, train_acc_at_epoch, train_iou_at_epoch = self.train(epoch+1)
 
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            valid_loss_at_epoch, valid_acc_at_epoch, valid_iou_at_epoch = self.val(epoch)
+            valid_loss_at_epoch, valid_acc_at_epoch, valid_iou_at_epoch = self.val(epoch+1)
 
             print("Epoch {} | Time Elapsed: {} |".format(epoch+1, (time.time() - ts)))
             print("                      Train | Accuracy: {} | Loss: {}".format(f"{train_acc_at_epoch:.4f}", f"{train_loss_at_epoch:.4f}"))
@@ -185,7 +185,7 @@ class Experiment(object):
             self.optimizer.zero_grad()
             with torch.enable_grad(): # torch.set_grad_enabled(True)
 
-                if self.config.debug and epoch > self.config.debug: 
+                if self.config.debug and epoch >= self.config.debug: 
                     torch.autograd.set_detect_anomaly(True)
                 outputs = self.model(inputs)
 
@@ -227,7 +227,7 @@ class Experiment(object):
                 #         raise Exception("NaN")
 
             self.model.train(False)
-            if self.config.debug and epoch > self.config.debug: 
+            if self.config.debug and epoch >= self.config.debug: 
                 torch.autograd.set_detect_anomaly(True)
             
             if self.classification:

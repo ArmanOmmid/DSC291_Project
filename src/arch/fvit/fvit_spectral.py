@@ -6,9 +6,16 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
 import torch
 import torch.nn as nn
-from torchvision.ops import MLP
+from torchvision.ops import MLP, Conv2dNormActivation
+
+class ConvStemConfig(NamedTuple):
+    out_channels: int
+    kernel_size: int
+    stride: int
+    norm_layer: Callable[..., nn.Module] = nn.BatchNorm2d
+    activation_layer: Callable[..., nn.Module] = nn.ReLU
         
-class EncoderBlock(nn.Module):
+class AttentionBlock(nn.Module):
     def __init__(
         self,
         num_heads: int,
@@ -16,7 +23,6 @@ class EncoderBlock(nn.Module):
         mlp_dim: int,
         dropout: float,
         attention_dropout: float,
-        seq_length: int,
         norm_layer: Callable[..., torch.nn.Module] = partial(nn.LayerNorm, eps=1e-6),
     ):
         super().__init__()
@@ -25,23 +31,9 @@ class EncoderBlock(nn.Module):
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
 
-        self.dropout = nn.Dropout(dropout)
-
-        self.L = seq_length
-        self.H = self.W = int(math.sqrt(self.L))
-        self.F = int(self.W // 2) + 1
-        self.G = self.H * self.F
-
         self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
 
-        # self.cross_query = nn.Parameter(torch.empty(self.L, self.G, hidden_dim, hidden_dim*2, dtype=torch.float32).normal_(std=0.02))
-        self.cross_query = nn.Parameter(torch.empty(self.L, self.G, hidden_dim, dtype=torch.float32).normal_(std=0.02))
-
-        self.mixer = nn.Parameter(torch.empty(self.H, self.F, hidden_dim, hidden_dim, 2, dtype=torch.float32).normal_(std=0.02))
-
-        self.fourier_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
-
-        self.combine = MLP(hidden_dim*2, [hidden_dim], activation_layer=nn.GELU, inplace=None, dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
 
         # MLP block
         self.ln_2 = norm_layer(hidden_dim)
@@ -49,7 +41,46 @@ class EncoderBlock(nn.Module):
 
     def forward(self, input: torch.Tensor):
         torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
+        x = self.ln_1(input)
+        
+        x, _ = self.self_attention(x, x, x, need_weights=False)
+            
+        x = self.dropout(x)
+        x = x + input
 
+        y = self.ln_2(x)
+        y = self.mlp(y)
+        return x + y
+
+class SpectralBlock(nn.Module):
+    def __init__(
+        self,
+        num_heads: int,
+        hidden_dim: int,
+        mlp_dim: int,
+        dropout: float,
+        norm_layer: Callable[..., torch.nn.Module] = partial(nn.LayerNorm, eps=1e-6),
+    ):
+        super().__init__()
+        self.num_heads = num_heads
+
+        # FFT block
+        self.ln_1 = norm_layer(hidden_dim)
+
+        self.weight_c = nn.Parameter(torch.empty(hidden_dim, hidden_dim).normal_(std=0.02))  # from BERT
+    
+        #self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
+
+        self.dropout = nn.Dropout(dropout)
+
+        # MLP block
+        self.ln_2 = norm_layer(hidden_dim)
+        self.mlp = MLP(hidden_dim, [mlp_dim, hidden_dim], activation_layer=nn.GELU, inplace=None, dropout=dropout)
+
+    def forward(self, input: torch.Tensor):
+        torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
+        x = self.ln_1(input)
+        
         N, L, C = input.shape
         H = W = int(math.sqrt(L))
         F = int(W // 2) + 1 # Fourier Width
@@ -57,47 +88,28 @@ class EncoderBlock(nn.Module):
 
         x = self.ln_1(input)
 
-        f = x.view(N, H, W, C)
-        f = torch.fft.rfft2(f, dim=(1, 2), norm='ortho')
+        x = x.view(N, H, W, C)
+        x = torch.fft.rfft2(x, dim=(1, 2), norm='ortho')
+        
+        x = torch.matmul(x, self.weight_c)
 
-        mixer = torch.view_as_complex(self.mixer)
-        f = torch.einsum("nhfd,hfds->nhfd", f, mixer)
-
-        # f = torch.view_as_real(f)
-        # f = f.reshape(N, H, F, C*2).reshape(N, G, C*2)
-        f = f.reshape(N, G, C)
-        f = torch.real(f)
-
-        x, _ = self.self_attention(x, x, x, need_weights=False)
-
-        # q = torch.einsum("nac, abcd -> nbd", x, self.cross_query)
-        q = torch.einsum("nac, abc -> nbc", x, self.cross_query)
-
-        f, _= self.fourier_attention(q, f, f)
-
-        # f = f.reshape(N, G, C*2).reshape(N, H, F, C, 2)
-        f = f.reshape(N, H, F, C)
-        # f = torch.view_as_complex(f)
-
-        f = torch.fft.irfft2(f, s=(H, W), dim=(1, 2), norm='ortho')
-        f = f.reshape(N, L, C)
-
-        x = torch.cat((x, f), dim=-1)
-        x = self.combine(x)
+        x = torch.fft.irfft2(x, s=(H, W), dim=(1, 2), norm='ortho')
+        x = x.reshape(N, L, C)
 
         x = self.dropout(x)
-        x = x + input
+        # x = x + input
 
         y = self.ln_2(x)
         y = self.mlp(y)
+        return y + input
 
-        return y
 
 class Encoder(nn.Module):
     def __init__(
         self,
         seq_length: int,
-        num_layers: int,
+        num_atn_layers: int,
+        num_spectral_layers: int,
         num_heads: int,
         hidden_dim: int,
         mlp_dim: int,
@@ -111,31 +123,39 @@ class Encoder(nn.Module):
         self.pos_embedding = nn.Parameter(torch.empty(1, seq_length, hidden_dim).normal_(std=0.02))  # from BERT
         self.dropout = nn.Dropout(dropout)
         layers: OrderedDict[str, nn.Module] = OrderedDict()
-        for i in range(num_layers):
-            layers[f"encoder_layer_{i}"] = EncoderBlock(
+        for i in range(num_spectral_layers):
+            layers[f"spct_layer_{i}"] = SpectralBlock(
+                num_heads,
+                hidden_dim,
+                mlp_dim,
+                dropout,
+                norm_layer,
+            )
+        for i in range(num_atn_layers):
+            layers[f"atn_layer_{i}"] = AttentionBlock(
                 num_heads,
                 hidden_dim,
                 mlp_dim,
                 dropout,
                 attention_dropout,
-                seq_length,
                 norm_layer,
             )
         self.layers = nn.Sequential(layers)
         self.ln = norm_layer(hidden_dim)
+
     def forward(self, input: torch.Tensor):
         torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
         input = input + self.pos_embedding
-        x = self.layers(self.dropout(input))
-        x = self.ln(x)
-        return x
+        return self.ln(self.layers(self.dropout(input)))
+
 
 class VisionTransformer(nn.Module):
     def __init__(
         self,
         image_size: int,
         patch_size: int,
-        num_layers: int,
+        num_atn_layers: int,
+        num_spectral_layers: int,
         num_heads: int,
         hidden_dim: int,
         mlp_dim: int,
@@ -144,11 +164,14 @@ class VisionTransformer(nn.Module):
         num_classes: int = 1000,
         representation_size: Optional[int] = None,
         norm_layer: Callable[..., torch.nn.Module] = partial(nn.LayerNorm, eps=1e-6),
+        conv_stem_configs: Optional[List[ConvStemConfig]] = None,
     ):
         super().__init__()
         torch._assert(image_size % patch_size == 0, "Input shape indivisible by patch size!")
         self.image_size = image_size
         self.patch_size = patch_size
+        self.num_atn_layers = num_atn_layers
+        self.num_spectral_layers = num_spectral_layers
         self.hidden_dim = hidden_dim
         self.mlp_dim = mlp_dim
         self.attention_dropout = attention_dropout
@@ -157,15 +180,42 @@ class VisionTransformer(nn.Module):
         self.representation_size = representation_size
         self.norm_layer = norm_layer
 
-        self.conv_proj = nn.Conv2d(
-            in_channels=3, out_channels=hidden_dim, kernel_size=patch_size, stride=patch_size
-        )
+        if conv_stem_configs is not None:
+            # As per https://arxiv.org/abs/2106.14881
+            seq_proj = nn.Sequential()
+            prev_channels = 3
+            for i, conv_stem_layer_config in enumerate(conv_stem_configs):
+                seq_proj.add_module(
+                    f"conv_bn_relu_{i}",
+                    Conv2dNormActivation(
+                        in_channels=prev_channels,
+                        out_channels=conv_stem_layer_config.out_channels,
+                        kernel_size=conv_stem_layer_config.kernel_size,
+                        stride=conv_stem_layer_config.stride,
+                        norm_layer=conv_stem_layer_config.norm_layer,
+                        activation_layer=conv_stem_layer_config.activation_layer,
+                    ),
+                )
+                prev_channels = conv_stem_layer_config.out_channels
+            seq_proj.add_module(
+                "conv_last", nn.Conv2d(in_channels=prev_channels, out_channels=hidden_dim, kernel_size=1)
+            )
+            self.conv_proj: nn.Module = seq_proj
+        else:
+            self.conv_proj = nn.Conv2d(
+                in_channels=3, out_channels=hidden_dim, kernel_size=patch_size, stride=patch_size
+            )
 
         seq_length = (image_size // patch_size) ** 2
 
+        # Add a class token
+        self.class_token = nn.Parameter(torch.zeros(1, 1, hidden_dim))
+        seq_length += 1
+
         self.encoder = Encoder(
             seq_length,
-            num_layers,
+            num_atn_layers,
+            num_spectral_layers,
             num_heads,
             hidden_dim,
             mlp_dim,
@@ -177,9 +227,9 @@ class VisionTransformer(nn.Module):
 
         heads_layers: OrderedDict[str, nn.Module] = OrderedDict()
         if representation_size is None:
-            heads_layers["head"] = nn.Linear(hidden_dim*seq_length, num_classes)
+            heads_layers["head"] = nn.Linear(hidden_dim, num_classes)
         else:
-            heads_layers["pre_logits"] = nn.Linear(hidden_dim*seq_length, representation_size)
+            heads_layers["pre_logits"] = nn.Linear(hidden_dim, representation_size)
             heads_layers["act"] = nn.Tanh()
             heads_layers["head"] = nn.Linear(representation_size, num_classes)
 
@@ -234,9 +284,14 @@ class VisionTransformer(nn.Module):
         x = self._process_input(x)
         n = x.shape[0]
 
+        # Expand the class token to the full batch
+        batch_class_token = self.class_token.expand(n, -1, -1)
+        x = torch.cat([batch_class_token, x], dim=1)
+
         x = self.encoder(x)
 
-        x = x.view(n, -1)
+        # Classifier "token" as used by standard language architectures
+        x = x[:, 0]
 
         x = self.heads(x)
 

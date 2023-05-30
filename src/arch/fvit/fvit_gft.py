@@ -25,23 +25,14 @@ class EncoderBlock(nn.Module):
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
 
+        # self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
+
         self.dropout = nn.Dropout(dropout)
 
         self.L = seq_length
         self.H = self.W = int(math.sqrt(self.L))
         self.F = int(self.W // 2) + 1
-        self.G = self.H * self.F
-
-        self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
-
-        # self.cross_query = nn.Parameter(torch.empty(self.L, self.G, hidden_dim, hidden_dim*2, dtype=torch.float32).normal_(std=0.02))
-        self.cross_query = nn.Parameter(torch.empty(self.L, self.G, hidden_dim, dtype=torch.float32).normal_(std=0.02))
-
-        self.mixer = nn.Parameter(torch.empty(self.H, self.F, hidden_dim, hidden_dim, 2, dtype=torch.float32).normal_(std=0.02))
-
-        self.fourier_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
-
-        self.combine = MLP(hidden_dim*2, [hidden_dim], activation_layer=nn.GELU, inplace=None, dropout=dropout)
+        self.mixer = nn.Parameter(torch.empty(self.H, self.F, hidden_dim, 2, dtype=torch.float32).normal_(std=0.02))
 
         # MLP block
         self.ln_2 = norm_layer(hidden_dim)
@@ -50,48 +41,30 @@ class EncoderBlock(nn.Module):
     def forward(self, input: torch.Tensor):
         torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
 
-        N, L, C = input.shape
+        B, L, C = input.shape
         H = W = int(math.sqrt(L))
-        F = int(W // 2) + 1 # Fourier Width
-        G = H*F # Fourier Sequence Length
+        F = int(W // 2) + 1
 
         x = self.ln_1(input)
 
-        f = x.view(N, H, W, C)
-        f = torch.fft.rfft2(f, dim=(1, 2), norm='ortho')
+        x = x.view(B, H, W, C)
+        x = torch.fft.rfft2(x, dim=(1, 2), norm='ortho')
 
         mixer = torch.view_as_complex(self.mixer)
-        f = torch.einsum("nhfd,hfds->nhfd", f, mixer)
+        x = x * torch.view_as_complex(mixer)
 
-        # f = torch.view_as_real(f)
-        # f = f.reshape(N, H, F, C*2).reshape(N, G, C*2)
-        f = f.reshape(N, G, C)
-        f = torch.real(f)
+        x = torch.fft.irfft2(x, s=(H, W), dim=(1, 2), norm='ortho')
+        x = x.reshape(B, L, C)
 
-        x, _ = self.self_attention(x, x, x, need_weights=False)
-
-        # q = torch.einsum("nac, abcd -> nbd", x, self.cross_query)
-        q = torch.einsum("nac, abc -> nbc", x, self.cross_query)
-
-        f, _= self.fourier_attention(q, f, f)
-
-        # f = f.reshape(N, G, C*2).reshape(N, H, F, C, 2)
-        f = f.reshape(N, H, F, C)
-        # f = torch.view_as_complex(f)
-
-        f = torch.fft.irfft2(f, s=(H, W), dim=(1, 2), norm='ortho')
-        f = f.reshape(N, L, C)
-
-        x = torch.cat((x, f), dim=-1)
-        x = self.combine(x)
-
+        # x, _ = self.self_attention(x, x, x, need_weights=False)
+            
         x = self.dropout(x)
         x = x + input
 
         y = self.ln_2(x)
         y = self.mlp(y)
 
-        return y
+        return x + y
 
 class Encoder(nn.Module):
     def __init__(

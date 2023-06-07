@@ -7,6 +7,9 @@ checkpoints/*
 weights/*
 !weights/.gitignore
 
+experiments/*
+!experiments/.gitignore
+
 __pycache__
 
 Accuracy.png

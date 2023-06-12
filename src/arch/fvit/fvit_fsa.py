@@ -1,3 +1,5 @@
+# Base Vision Transformer Architecture Credit to PyTorch
+# https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py
 
 import math
 from collections import OrderedDict
@@ -34,10 +36,7 @@ class EncoderBlock(nn.Module):
         self.F = int(self.W // 2) + 1
         self.G = self.H * self.F
 
-        # self.mixer = nn.Parameter(torch.empty(self.H, self.F, hidden_dim, hidden_dim, 2, dtype=torch.float32).normal_(std=0.02))
-
         self.fourier_attention = nn.MultiheadAttention(hidden_dim*2, num_heads, dropout=attention_dropout, batch_first=True)
-
 
         # MLP block
         self.ln_2 = norm_layer(hidden_dim)
@@ -66,9 +65,6 @@ class EncoderBlock(nn.Module):
         x = x.reshape(N, G, C*2).reshape(N, H, F, C, 2)
 
         x = torch.view_as_complex(x)
-
-        # mixer = torch.view_as_complex(self.mixer)
-        # x = torch.einsum("nhfd,hfds->nhfd", x, mixer)
 
         x = torch.fft.irfft2(x, s=(H, W), dim=(1, 2), norm='ortho')
         x = x.reshape(N, L, C)
@@ -165,9 +161,13 @@ class VisionTransformer(nn.Module):
         )
         self.seq_length = seq_length
 
+        reduced_tokens = int(math.sqrt(seq_length))
+        self.token_control = torch.nn.Conv1d(seq_length, reduced_tokens, kernel_size=1)
+        
         reduced_dims = int(math.sqrt(hidden_dim))
-        self.channel_control = MLP(hidden_dim, [hidden_dim, reduced_dims], activation_layer=nn.GELU, inplace=None, dropout=dropout)
-        linear_dims = reduced_dims * seq_length
+        self.channel_control = MLP(hidden_dim, [reduced_dims], activation_layer=nn.GELU, inplace=None, dropout=dropout)
+
+        linear_dims = reduced_dims * reduced_tokens
 
         heads_layers: OrderedDict[str, nn.Module] = OrderedDict()
 
@@ -230,6 +230,8 @@ class VisionTransformer(nn.Module):
         n = x.shape[0]
 
         x = self.encoder(x)
+
+        x = self.token_control(x)
 
         x = self.channel_control(x)
 

@@ -1,3 +1,5 @@
+# Base Vision Transformer Architecture Credit to PyTorch
+# https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py
 
 import math
 from collections import OrderedDict
@@ -51,7 +53,7 @@ class EncoderBlock(nn.Module):
         x = torch.fft.rfft2(x, dim=(1, 2), norm='ortho')
 
         mixer = torch.view_as_complex(self.mixer)
-        x = x * torch.view_as_complex(mixer)
+        x = x * mixer
 
         x = torch.fft.irfft2(x, s=(H, W), dim=(1, 2), norm='ortho')
         x = x.reshape(B, L, C)
@@ -148,9 +150,13 @@ class VisionTransformer(nn.Module):
         )
         self.seq_length = seq_length
 
+        reduced_tokens = int(math.sqrt(seq_length))
+        self.token_control = torch.nn.Conv1d(seq_length, reduced_tokens, kernel_size=1)
+        
         reduced_dims = int(math.sqrt(hidden_dim))
-        self.channel_control = MLP(hidden_dim, [hidden_dim, reduced_dims], activation_layer=nn.GELU, inplace=None, dropout=dropout)
-        linear_dims = reduced_dims * seq_length
+        self.channel_control = MLP(hidden_dim, [reduced_dims], activation_layer=nn.GELU, inplace=None, dropout=dropout)
+
+        linear_dims = reduced_dims * reduced_tokens
 
         heads_layers: OrderedDict[str, nn.Module] = OrderedDict()
 
@@ -213,6 +219,8 @@ class VisionTransformer(nn.Module):
         n = x.shape[0]
 
         x = self.encoder(x)
+
+        x = self.token_control(x)
 
         x = self.channel_control(x)
 

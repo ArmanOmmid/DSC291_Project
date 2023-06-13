@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 #ToDO Fill in the __ values
-class SmoothMLPMixer(nn.Module):
+class Smoother(nn.Module):
     def __init__(self, n_class, config):
         super().__init__()
 

@@ -87,11 +87,10 @@ class Smoother(nn.Module):
         :return:
         """
 
-        recons_loss = nn.CrossEntropyLoss(output, labels)
-
+        label_loss = nn.CrossEntropyLoss(output, labels)
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 
-        loss = recons_loss + self.kl_weight * kld_loss
+        loss = label_loss + self.kl_weight * kld_loss
 
         return loss

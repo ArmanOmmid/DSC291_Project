@@ -15,7 +15,7 @@ class Smoother(nn.Module):
 
         modules = []
         self.hidden_dims = hidden_dims = config.hidden_config
-        pooling = np.ones(len(self.hidden_dims)) * 2
+        pooling = np.ones(len(self.hidden_dims), dtype=int) * 2
 
         # Build Encoder
         in_channels = 3
@@ -31,7 +31,6 @@ class Smoother(nn.Module):
             )
             in_channels = h_dim
             current_size = current_size // pool
-            print(pool)
 
         self.encoder = nn.Sequential(*modules)
         self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
@@ -44,7 +43,6 @@ class Smoother(nn.Module):
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
         # Split the result into mu and var components of the latent Gaussian distribution
-        print(self.fc_mu)
         mu = self.fc_mu(result)
         log_var = self.fc_var(result)
 

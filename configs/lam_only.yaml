@@ -1,11 +1,11 @@
 # Architecture
 model: dsc_arch
-latent_smoothing: False
+latent_smoothing: True
 image_size: 32
 hidden_config: [32, 64, 128, 256, 512]
 latent_dim: 512
 kl_weight: 0
-lam: 0
+lam: 0.0025
 
 # Dataset
 dataset: CIFAR10

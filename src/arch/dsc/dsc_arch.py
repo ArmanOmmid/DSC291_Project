@@ -31,6 +31,7 @@ class Smoother(nn.Module):
             )
             in_channels = h_dim
             current_size = current_size // pool
+            print(pool)
 
         self.encoder = nn.Sequential(*modules)
         self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)

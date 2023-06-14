@@ -1,10 +1,10 @@
 # Architecture
 model: dsc_arch
-standard: True
+standard: False
 image_size: 32
 hidden_config: [32, 64, 128, 256, 512]
 latent_dim: 256
-kl_weight: 1
+kl_weight: 0.2
 
 # Dataset
 dataset: CIFAR10

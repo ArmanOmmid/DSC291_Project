@@ -7,6 +7,8 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
+        self.cross_entropy = nn.CrossEntropyLoss()
+
         self.latent_dim = config.latent_dim
         self.kl_weight = config.kl_weight
 
@@ -63,7 +65,7 @@ class Smoother(nn.Module):
 
     def loss_function(self, output, labels):
 
-        label_loss = nn.CrossEntropyLoss(output, labels)
+        label_loss = self.cross_entropy(output, labels)
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 

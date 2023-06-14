@@ -14,6 +14,7 @@ class Smoother(nn.Module):
         hidden_dims = config.layer_config
 
         # Build Encoder
+        in_channels = 3
         for h_dim in hidden_dims:
             modules.append(
                 nn.Sequential(

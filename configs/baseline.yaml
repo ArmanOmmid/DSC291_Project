@@ -2,8 +2,8 @@
 model: dsc_arch
 latent_smoothing: False
 image_size: 32
-hidden_config: [32, 64, 128, 256, 512]
-latent_dim: 512
+hidden_config: [64, 128, 256, 512, 1024]
+latent_dim: 4096
 kl_weight: 0
 lam: 0
 

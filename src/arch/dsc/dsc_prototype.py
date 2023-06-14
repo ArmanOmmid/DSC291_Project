@@ -38,33 +38,26 @@ class Smoother(nn.Module):
 
         self.encoder = nn.Sequential(*modules)
 
-        if not self.latent_smoothing:
-            self.direct = nn.Linear(hidden_dims[-1] * current_size, num_classes)
-        else:
-            self.gaussian_parameters = nn.ModuleDict(
-                {
-                    'mean':  nn.Linear(hidden_dims[-1] * current_size, self.latent_dim),
-                    'variance': nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
-                }
-            )
+        self.gaussian_parameters = nn.ModuleDict(
+            {
+                'mean':  nn.Linear(hidden_dims[-1] * current_size, self.latent_dim),
+                'variance': nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
+            }
+        )
 
-            self.decoder = nn.Linear(self.latent_dim, num_classes)
-
-    def standard_forward(self, input):
-        result = self.encoder(input)
-        result = torch.flatten(result, start_dim=1)
-        result = self.direct(result)
-        return result
+        self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
         # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.gaussian_parameters['mean'](result)
-        log_var = self.gaussian_parameters['variance'](result)
+        log_var = self.gaussian_parameters['variance'](result) if self.latent_smoothing else 0
         return [mu, log_var]
     
     def reparameterize(self, mu, log_var):
+        if not self.latent_smoothing:
+            return mu
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return eps * std + mu
@@ -74,9 +67,6 @@ class Smoother(nn.Module):
         return result
 
     def forward(self, input):
-
-        if not self.latent_smoothing:
-            return self.standard_forward(input)
         
         mu, log_var = self.encode(input)
         self.mu, self.log_var = mu, log_var
@@ -97,6 +87,8 @@ class Smoother(nn.Module):
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 
-        loss = label_loss + self.kl_weight * kld_loss + self.config.lam * torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2)
+        loss = label_loss 
+        + self.kl_weight * kld_loss 
+        + self.config.lam * torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2)
 
         return loss

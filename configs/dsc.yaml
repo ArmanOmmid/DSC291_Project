@@ -5,6 +5,7 @@ image_size: 32
 hidden_config: [32, 64, 128, 256, 512]
 latent_dim: 256
 kl_weight: 0.00025
+beta: 0.5
 
 # Dataset
 dataset: CIFAR10

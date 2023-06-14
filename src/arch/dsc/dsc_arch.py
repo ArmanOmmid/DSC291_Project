@@ -26,10 +26,10 @@ class Smoother(nn.Module):
             in_channels = h_dim
 
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1] * 4, self.latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1] * 4, self.latent_dim)
+        self.fc_mu = nn.Linear(hidden_dims[-1], self.latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1], self.latent_dim)
 
-        self.decoder_input = nn.Linear(self.latent_dim, hidden_dims[-1] * 4)
+        self.decoder_input = nn.Linear(self.latent_dim, hidden_dims[-1])
         self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):

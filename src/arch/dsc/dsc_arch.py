@@ -8,7 +8,7 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
-        self.cross_entropy = nn.CrossEntropyLoss()
+        self.base_criterion = nn.CrossEntropyLoss()
 
         self.latent_smoothing = config.latent_smoothing
 
@@ -35,7 +35,6 @@ class Smoother(nn.Module):
             current_size = current_size // pool
 
         self.encoder = nn.Sequential(*modules)
-
 
         if not self.latent_smoothing:
             self.direct = nn.Linear(hidden_dims[-1] * current_size, num_classes)
@@ -83,13 +82,17 @@ class Smoother(nn.Module):
             output = self.decode(z)
 
         return  output
+    
+    def register_base_criterion(self, criterion):
+        self.base_criterion = criterion
+
 
     def loss_function(self, output, labels):
 
         if not self.latent_smoothing:
-            loss = self.cross_entropy(output, labels)
+            loss = self.base_criterion(output, labels)
         else:
-            label_loss = self.cross_entropy(output, labels)
+            label_loss = self.base_criterion(output, labels)
             kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
             loss = label_loss + self.kl_weight * kld_loss
 

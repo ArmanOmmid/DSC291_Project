@@ -130,13 +130,15 @@ def main(args):
     print("Model Architecture: ", config.model)
 
     """ Criterion """
-    if hasattr(model, 'loss_function'):
-        criterion = model.loss_function
-    elif config.weighted_loss:
+    if config.weighted_loss:
         class_weights = get_class_weights(train_loader, len(class_names)).to(device)
         criterion = nn.CrossEntropyLoss(weight=class_weights)
     else:
         criterion = nn.CrossEntropyLoss()
+
+    if hasattr(model, 'loss_function'):
+        model.register_base_criterion(criterion)
+        criterion = model.loss_function
 
     """ Debugging """
     # If Debug, set a hook for modules with an arbitrary debug attribute 

@@ -12,11 +12,12 @@ class Smoother(nn.Module):
 
         modules = []
         self.hidden_dims = hidden_dims = config.hidden_config
+        pooling = torch.ones(len(self.hidden_dims)) * 2
 
         # Build Encoder
         in_channels = 3
         current_size = config.image_size
-        for h_dim, pool in hidden_dims:
+        for h_dim, pool in zip(hidden_dims, pooling):
             modules.append(
                 nn.Sequential(
                     nn.Conv2d(in_channels, out_channels=h_dim,

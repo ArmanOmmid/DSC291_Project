@@ -62,8 +62,8 @@ class Smoother(nn.Module):
         log_var = self.gaussian_parameters['variance'](result)
         return [mu, log_var]
     
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return eps * std + mu
 

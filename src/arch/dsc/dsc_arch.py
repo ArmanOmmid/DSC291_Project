@@ -39,10 +39,11 @@ class Smoother(nn.Module):
         self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):
+
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
-
         # Split the result into mu and var components of the latent Gaussian distribution
+        print(self.fc_mu)
         mu = self.fc_mu(result)
         log_var = self.fc_var(result)
 

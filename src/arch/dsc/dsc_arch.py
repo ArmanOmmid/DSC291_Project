@@ -4,15 +4,14 @@ import torch.nn as nn
 
 #ToDO Fill in the __ values
 class Smoother(nn.Module):
-    def __init__(self, n_class, config):
+    def __init__(self, num_classes, config):
         super().__init__()
 
         self.latent_dim = config.latent_dim
         self.kl_weight = config.kl_weight
 
         modules = []
-        if hidden_dims is None:
-            hidden_dims = [32, 64, 128, 256, 512]
+        hidden_dims = config.layer_config
 
         # Build Encoder
         for h_dim in hidden_dims:
@@ -28,6 +27,8 @@ class Smoother(nn.Module):
         self.encoder = nn.Sequential(*modules)
         self.fc_mu = nn.Linear(hidden_dims[-1]*4, self.latent_dim)
         self.fc_var = nn.Linear(hidden_dims[-1]*4, self.latent_dim)
+
+        self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):
         """

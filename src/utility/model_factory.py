@@ -130,6 +130,8 @@ def build_model(config, classes):
                                                                 num_classes=class_count)
     elif config.model == 'dsc_arch':
         model = arch.dsc_arch.Smoother(num_classes=class_count, config=config)
+    elif config.model == 'dsc_prototype':
+        model = arch.dsc_prototype.Smoother(num_classes=class_count, config=config)
 
     else:
         raise NotImplementedError("Model Architecture Not Found")

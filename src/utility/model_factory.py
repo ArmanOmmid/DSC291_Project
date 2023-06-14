@@ -129,7 +129,6 @@ def build_model(config, classes):
                                                                 layer_config=config.layer_config, num_heads=config.num_heads, hidden_dim=config.hidden_dim, mlp_dim=mlp_dim, \
                                                                 num_classes=class_count)
     elif config.model == 'dsc_arch':
-        mlp_dim = int(config.hidden_dim * config.expansion)
         model = arch.dsc.Smoother(num_classes=class_count, config=config)
 
     else:

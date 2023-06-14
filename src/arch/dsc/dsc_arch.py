@@ -8,6 +8,8 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
+        self.config = config
+
         self.base_criterion = nn.CrossEntropyLoss()
 
         self.latent_smoothing = config.latent_smoothing

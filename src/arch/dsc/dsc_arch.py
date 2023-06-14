@@ -8,9 +8,9 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
-        self.latent_smoothing = config.latent_smoothing
-
         self.cross_entropy = nn.CrossEntropyLoss()
+
+        self.latent_smoothing = config.latent_smoothing
 
         self.latent_dim = config.latent_dim
         self.kl_weight = config.kl_weight
@@ -35,7 +35,7 @@ class Smoother(nn.Module):
             current_size = current_size // pool
 
         self.encoder = nn.Sequential(*modules)
-        
+
 
         if not self.latent_smoothing:
             self.direct = nn.Linear(hidden_dims[-1] * current_size, num_classes)

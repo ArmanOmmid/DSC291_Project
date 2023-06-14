@@ -33,6 +33,14 @@ class Smoother(nn.Module):
             current_size = current_size // pool
 
         self.encoder = nn.Sequential(*modules)
+
+        self.gaussian_parameters = nn.ModuleDict(
+            {
+                'mean':  nn.Linear(hidden_dims[-1] * current_size, self.latent_dim),
+                'variance': nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
+            }
+        )
+
         self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
         self.fc_var = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
 
@@ -43,8 +51,8 @@ class Smoother(nn.Module):
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
         # Split the result into mu and var components of the latent Gaussian distribution
-        mu = self.fc_mu(result)
-        log_var = self.fc_var(result)
+        mu = self.gaussian_parameters['mean'](result)
+        log_var = self.gaussian_parameters['variance'](result)
 
         return [mu, log_var]
 

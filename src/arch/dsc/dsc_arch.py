@@ -15,6 +15,7 @@ class Smoother(nn.Module):
 
         # Build Encoder
         in_channels = 3
+        current_size = config.image_size
         for h_dim in hidden_dims:
             modules.append(
                 nn.Sequential(
@@ -25,10 +26,11 @@ class Smoother(nn.Module):
                     nn.LeakyReLU())
             )
             in_channels = h_dim
+            current_size = current_size // 2
 
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1], self.latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1], self.latent_dim)
+        self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
 
         self.decoder_input = nn.Linear(self.latent_dim, hidden_dims[-1])
         self.decoder = nn.Linear(self.latent_dim, num_classes)

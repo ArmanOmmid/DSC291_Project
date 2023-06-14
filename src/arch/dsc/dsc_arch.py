@@ -8,7 +8,7 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
-        self.standard = config.standard
+        self.latent_smoothing = config.latent_smoothing
 
         self.cross_entropy = nn.CrossEntropyLoss()
 
@@ -35,8 +35,9 @@ class Smoother(nn.Module):
             current_size = current_size // pool
 
         self.encoder = nn.Sequential(*modules)
+        
 
-        if self.standard:
+        if not self.latent_smoothing:
             self.direct = nn.Linear(hidden_dims[-1] * current_size, num_classes)
         else:
             self.gaussian_parameters = nn.ModuleDict(
@@ -48,35 +49,33 @@ class Smoother(nn.Module):
 
             self.decoder = nn.Linear(self.latent_dim, num_classes)
 
-    def direct_forward(self, input):
+    def standard_forward(self, input):
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
         result = self.direct(result)
         return result
 
     def encode(self, input):
-
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
         # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.gaussian_parameters['mean'](result)
         log_var = self.gaussian_parameters['variance'](result)
-
         return [mu, log_var]
-
-    def decode(self, z):
-        result = self.decoder(z)
-        return result
-
+    
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
 
+    def decode(self, z):
+        result = self.decoder(z)
+        return result
+
     def forward(self, input):
 
-        if self.standard:
-            output = self.direct_forward(input)
+        if not self.latent_smoothing:
+            output = self.standard_forward(input)
         else:
             mu, log_var = self.encode(input)
             self.mu, self.log_var = mu, log_var
@@ -87,7 +86,7 @@ class Smoother(nn.Module):
 
     def loss_function(self, output, labels):
 
-        if self.standard:
+        if not self.latent_smoothing:
             loss = self.cross_entropy(output, labels)
         else:
             label_loss = self.cross_entropy(output, labels)

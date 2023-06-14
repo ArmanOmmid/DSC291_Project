@@ -1,6 +1,6 @@
 # Architecture
 model: dsc_arch
-standard: False
+latent_smoothing: True
 image_size: 32
 hidden_config: [32, 64, 128, 256, 512]
 latent_dim: 256

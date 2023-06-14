@@ -41,9 +41,6 @@ class Smoother(nn.Module):
             }
         )
 
-        self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
-
         self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):

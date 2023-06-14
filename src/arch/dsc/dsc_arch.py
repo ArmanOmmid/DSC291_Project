@@ -11,7 +11,7 @@ class Smoother(nn.Module):
         self.kl_weight = config.kl_weight
 
         modules = []
-        hidden_dims = config.layer_config
+        self.hidden_dims = hidden_dims = config.layer_config
 
         # Build Encoder
         in_channels = 3
@@ -34,7 +34,9 @@ class Smoother(nn.Module):
 
     def encode(self, input):
         result = self.encoder(input)
+        print(result.shape)
         result = torch.flatten(result, start_dim=1)
+        print(result.shape)
 
         # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.fc_mu(result)

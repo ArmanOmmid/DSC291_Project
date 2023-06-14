@@ -32,7 +32,6 @@ class Smoother(nn.Module):
         self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
         self.fc_var = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
 
-        self.decoder_input = nn.Linear(self.latent_dim, hidden_dims[-1])
         self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):
@@ -48,9 +47,7 @@ class Smoother(nn.Module):
         return [mu, log_var]
 
     def decode(self, z):
-        result = self.decoder_input(z)
-        result = result.view(-1, 512, 2, 2)
-        result = self.decoder(result)
+        result = self.decoder(z)
         return result
 
     def reparameterize(self, mu, logvar):

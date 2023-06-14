@@ -26,49 +26,29 @@ class Smoother(nn.Module):
             in_channels = h_dim
 
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1]*4, self.latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1]*4, self.latent_dim)
+        self.fc_mu = nn.Linear(hidden_dims[-1] * 4, self.latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1] * 4, self.latent_dim)
 
+        self.decoder_input = nn.Linear(self.latent_dim, hidden_dims[-1] * 4)
         self.decoder = nn.Linear(self.latent_dim, num_classes)
 
     def encode(self, input):
-        """
-        Encodes the input by passing through the encoder network
-        and returns the latent codes.
-        :param input: (Tensor) Input tensor to encoder [N x C x H x W]
-        :return: (Tensor) List of latent codes
-        """
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
 
-        # Split the result into mu and var components
-        # of the latent Gaussian distribution
+        # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.fc_mu(result)
         log_var = self.fc_var(result)
 
         return [mu, log_var]
 
     def decode(self, z):
-        """
-        Maps the given latent codes
-        onto the image space.
-        :param z: (Tensor) [B x D]
-        :return: (Tensor) [B x C x H x W]
-        """
         result = self.decoder_input(z)
         result = result.view(-1, 512, 2, 2)
         result = self.decoder(result)
-        result = self.final_layer(result)
         return result
 
     def reparameterize(self, mu, logvar):
-        """
-        Reparameterization trick to sample from N(mu, var) from
-        N(0,1).
-        :param mu: (Tensor) Mean of the latent Gaussian [B x D]
-        :param logvar: (Tensor) Standard deviation of the latent Gaussian [B x D]
-        :return: (Tensor) [B x D]
-        """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
@@ -81,13 +61,6 @@ class Smoother(nn.Module):
         return  output
 
     def loss_function(self, output, labels):
-        """
-        Computes the VAE loss function.
-        KL(N(\mu, \sigma), N(0, 1)) = \log \frac{1}{\sigma} + \frac{\sigma^2 + \mu^2}{2} - \frac{1}{2}
-        :param args:
-        :param kwargs:
-        :return:
-        """
 
         label_loss = nn.CrossEntropyLoss(output, labels)
 

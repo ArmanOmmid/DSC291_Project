@@ -17,7 +17,7 @@ learning_rate: 0.0001
 scheduler: True
 num_workers: 1
 weighted_loss: False
-early_stop_tolerance: 20
+early_stop_tolerance: 10
 
 # Misc
 augment: False

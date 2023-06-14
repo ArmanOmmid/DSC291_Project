@@ -74,26 +74,26 @@ class Smoother(nn.Module):
     def forward(self, input):
 
         if not self.latent_smoothing:
-            output = self.standard_forward(input)
-        else:
-            mu, log_var = self.encode(input)
-            self.mu, self.log_var = mu, log_var
-            z = self.reparameterize(mu, log_var)
-            output = self.decode(z)
+            return self.standard_forward(input)
+        
+        mu, log_var = self.encode(input)
+        self.mu, self.log_var = mu, log_var
+        z = self.reparameterize(mu, log_var)
+        output = self.decode(z)
 
         return  output
     
     def register_base_criterion(self, criterion):
         self.base_criterion = criterion
 
-
     def loss_function(self, output, labels):
         if not self.latent_smoothing:
             return self.base_criterion(output, labels)
 
-
         label_loss = self.base_criterion(output, labels)
+
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
+
         loss = label_loss + self.kl_weight * kld_loss
 
         return loss

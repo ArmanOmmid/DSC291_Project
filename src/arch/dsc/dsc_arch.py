@@ -8,6 +8,8 @@ class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
 
+        self.standard = config.standard
+
         self.cross_entropy = nn.CrossEntropyLoss()
 
         self.latent_dim = config.latent_dim
@@ -34,14 +36,23 @@ class Smoother(nn.Module):
 
         self.encoder = nn.Sequential(*modules)
 
-        self.gaussian_parameters = nn.ModuleDict(
-            {
-                'mean':  nn.Linear(hidden_dims[-1] * current_size, self.latent_dim),
-                'variance': nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
-            }
-        )
+        if self.standard:
+            self.direct = nn.Linear(hidden_dims[-1] * current_size, num_classes)
+        else:
+            self.gaussian_parameters = nn.ModuleDict(
+                {
+                    'mean':  nn.Linear(hidden_dims[-1] * current_size, self.latent_dim),
+                    'variance': nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)
+                }
+            )
 
-        self.decoder = nn.Linear(self.latent_dim, num_classes)
+            self.decoder = nn.Linear(self.latent_dim, num_classes)
+
+    def direct_forward(self, input):
+        result = self.encoder(input)
+        result = torch.flatten(result, start_dim=1)
+        result = self.direct(result)
+        return result
 
     def encode(self, input):
 
@@ -63,18 +74,24 @@ class Smoother(nn.Module):
         return eps * std + mu
 
     def forward(self, input):
-        mu, log_var = self.encode(input)
-        z = self.reparameterize(mu, log_var)
-        output = self.decode(z)
-        self.mu, self.log_var = mu, log_var
+
+        if self.standard:
+            output = self.direct_forward(input)
+        else:
+            mu, log_var = self.encode(input)
+            self.mu, self.log_var = mu, log_var
+            z = self.reparameterize(mu, log_var)
+            output = self.decode(z)
+
         return  output
 
     def loss_function(self, output, labels):
 
-        label_loss = self.cross_entropy(output, labels)
-
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
-
-        loss = label_loss + self.kl_weight * kld_loss
+        if self.standard:
+            loss = self.cross_entropy(output, labels)
+        else:
+            label_loss = self.cross_entropy(output, labels)
+            kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
+            loss = label_loss + self.kl_weight * kld_loss
 
         return loss

@@ -23,11 +23,11 @@ class Smoother(nn.Module):
                     nn.Conv2d(in_channels, out_channels=h_dim,
                               kernel_size = 3 , stride = 1, padding = 1),
                     nn.BatchNorm2d(h_dim),
-                    nn.MaxPool2d((2,2)),
+                    nn.MaxPool2d((pool,pool)),
                     nn.LeakyReLU())
             )
             in_channels = h_dim
-            current_size = current_size // 2
+            current_size = current_size // pool
 
         self.encoder = nn.Sequential(*modules)
         self.fc_mu = nn.Linear(hidden_dims[-1] * current_size, self.latent_dim)

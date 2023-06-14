@@ -11,12 +11,12 @@ class Smoother(nn.Module):
         self.kl_weight = config.kl_weight
 
         modules = []
-        self.hidden_dims = hidden_dims = config.layer_config
+        self.hidden_dims = hidden_dims = config.hidden_config
 
         # Build Encoder
         in_channels = 3
         current_size = config.image_size
-        for h_dim in hidden_dims:
+        for h_dim, pool in hidden_dims:
             modules.append(
                 nn.Sequential(
                     nn.Conv2d(in_channels, out_channels=h_dim,
@@ -36,9 +36,7 @@ class Smoother(nn.Module):
 
     def encode(self, input):
         result = self.encoder(input)
-        print(result.shape)
         result = torch.flatten(result, start_dim=1)
-        print(result.shape)
 
         # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.fc_mu(result)

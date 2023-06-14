@@ -1,7 +1,7 @@
 # Architecture
 model: dsc_arch
 image_size: 32
-layer_config: [32, 64, 128, 256, 512]
+hidden_config: [32, 64, 128, 256, 512]
 latent_dim: 256
 kl_weight: 1
 

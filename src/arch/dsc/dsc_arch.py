@@ -1,6 +1,7 @@
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 #ToDO Fill in the __ values
 class Smoother(nn.Module):
@@ -14,7 +15,7 @@ class Smoother(nn.Module):
 
         modules = []
         self.hidden_dims = hidden_dims = config.hidden_config
-        pooling = torch.ones(len(self.hidden_dims)) * 2
+        pooling = np.ones(len(self.hidden_dims)) * 2
 
         # Build Encoder
         in_channels = 3

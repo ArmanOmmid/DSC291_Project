@@ -1,6 +1,7 @@
 
 import torch
 import torch.nn as nn
+import torchvision
 import numpy as np
 
 #ToDO Fill in the __ values
@@ -45,7 +46,7 @@ class Smoother(nn.Module):
             }
         )
 
-        self.decoder = nn.Linear(self.latent_dim, num_classes)
+        self.decoder = torchvision.ops.MLP(self.latent_dim, [self.latent_dim, self.latent_dim, num_classes])
 
     def encode(self, input):
         result = self.encoder(input)

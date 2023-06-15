@@ -95,7 +95,7 @@ class Smoother(nn.Module):
         labels_stacked = labels.reshape(-1)
         mu_stacked = torch.vstack(list(self.mu))
 
-        margin_loss = 1 / self.config.margin_weight
+        margin_loss = 0
         for c in range(self.num_classes):
             indices = (labels_stacked == c).nonzero().flatten()
             selected_mus = mu_stacked[indices]
@@ -106,7 +106,7 @@ class Smoother(nn.Module):
 
             difference = mu_mean - others
             with torch.no_grad():
-                difference += torch.sign(difference) * 1e-8
+                difference += torch.sign(difference) * 1e-2
 
             norm_distances = torch.norm(mu_mean - others, dim=1)
 

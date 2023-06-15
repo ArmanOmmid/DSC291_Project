@@ -7,7 +7,7 @@ latent_dim: 4096
 kl_weight: 0.0025
 lam: 0
 margin: 1
-margin_weight: 0.01
+margin_weight: 0.0001
 
 # Dataset
 dataset: CIFAR10

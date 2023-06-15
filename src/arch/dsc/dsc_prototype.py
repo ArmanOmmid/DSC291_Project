@@ -46,7 +46,7 @@ class Smoother(nn.Module):
             }
         )
 
-        self.decoder = torchvision.ops.MLP(self.latent_dim, [self.latent_dim, self.latent_dim, num_classes])
+        self.decoder = nn.Linear(self.latent_dim, num_classes) # torchvision.ops.MLP(self.latent_dim, [self.latent_dim, self.latent_dim, num_classes])
 
     def encode(self, input):
         result = self.encoder(input)

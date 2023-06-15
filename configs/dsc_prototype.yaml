@@ -5,7 +5,7 @@ image_size: 32
 hidden_config: [64, 128, 256, 512, 1024]
 latent_dim: 4096
 kl_weight: 0.0025
-weight_decay: 0
+weight_decay: 0.0001
 classifier_weight_decay: 0
 margin: 10
 margin_weight: 0.0001

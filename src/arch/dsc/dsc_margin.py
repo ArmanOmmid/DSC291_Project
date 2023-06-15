@@ -4,7 +4,6 @@ import torch.nn as nn
 import torchvision
 import numpy as np
 
-#ToDO Fill in the __ values
 class Smoother(nn.Module):
     def __init__(self, num_classes, config):
         super().__init__()
@@ -26,6 +25,7 @@ class Smoother(nn.Module):
         # Build Encoder
         in_channels = 3
         current_size = config.image_size
+        dropout_rate = config.dropout_rate
         for h_dim, pool in zip(hidden_dims, pooling):
             modules.append(
                 nn.Sequential(
@@ -33,7 +33,8 @@ class Smoother(nn.Module):
                               kernel_size = 3 , stride = 1, padding = 1),
                     nn.BatchNorm2d(h_dim),
                     nn.MaxPool2d((pool,pool)),
-                    nn.LeakyReLU())
+                    nn.LeakyReLU(),
+                    nn.Dropout(dropout_rate))
             )
             in_channels = h_dim
             current_size = current_size // pool

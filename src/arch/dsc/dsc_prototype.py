@@ -107,7 +107,7 @@ class Smoother(nn.Module):
             difference = mu_mean - others
             with torch.no_grad():
                 # difference += torch.sign(difference) * 1e-2
-                difference.clamp(min=1e-8)
+                difference.clamp(min=1e-2)
 
             norm_distances = torch.norm(difference, dim=1)
 

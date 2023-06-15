@@ -54,11 +54,11 @@ class Smoother(nn.Module):
         result = torch.flatten(result, start_dim=1)
         # Split the result into mu and var components of the latent Gaussian distribution
         mu = self.gaussian_parameters['mean'](result)
-        log_var = self.gaussian_parameters['variance'](result) if self.latent_smoothing else 0
+        log_var = self.gaussian_parameters['variance'](result) if self.latent_smoothing and torch.is_grad_enabled() else 0
         return [mu, log_var]
     
     def reparameterize(self, mu, log_var):
-        if not self.latent_smoothing:
+        if not self.latent_smoothing or not torch.is_grad_enabled():
             return mu
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
@@ -109,6 +109,9 @@ class Smoother(nn.Module):
             others = mu_stacked[other_indices]
 
             norm_distances = torch.norm(mu_mean - others, dim=1)
+
+            with torch.no_grad():
+                norm_distances.clamp(min=1e-8)
 
             margin = self.config.margin - norm_distances
             margin[margin < 0] = 0

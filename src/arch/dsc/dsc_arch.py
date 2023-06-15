@@ -15,6 +15,7 @@ class Smoother(nn.Module):
 
         self.latent_dim = config.latent_dim
         self.kl_weight = config.kl_weight
+        self.fisher_weight = config.fisher_weight
 
         modules = []
         self.hidden_dims = hidden_dims = config.hidden_config
@@ -98,6 +99,8 @@ class Smoother(nn.Module):
             class_indices = torch.nonzero(labels == i).squeeze() # Get indices where the label for class i is 1
             if class_indices.numel() == 1:
                 class_indices = class_indices.unsqueeze(0)
+            elif class_indices.numel() == 0:
+                continue
             class_z = z[class_indices]  # Get the corresponding z values for class i
             class_average = torch.mean(class_z, dim=0)  # Compute the average over z for class i
             class_averages[i] = class_average
@@ -118,7 +121,14 @@ class Smoother(nn.Module):
         expanded_diffs = diffs.unsqueeze(-1) # [num_classes, latent_dim, 1]
         
         S_b = torch.sum((expanded_diffs @ expanded_diffs.transpose(1,2)) * class_counts.unsqueeze(-1).unsqueeze(-1),dim=0)
-        
+        if torch.any(torch.isnan(S_b)):
+            print(self.mu)
+            print(self.log_var)
+            print(self.z)
+            print(z_bar)
+            print(z_bar_i)
+            print(class_counts)
+            raise Exception("nan")
         
         S_w = torch.zeros(self.latent_dim, self.latent_dim, device=self.device)
         for z_sample, lbl in zip(self.z, labels):
@@ -127,10 +137,8 @@ class Smoother(nn.Module):
             prod = expanded_diff @ expanded_diff.transpose(0,1)
             S_w += prod
             
-        print(S_w)
         
-        fisher_loss_1 = torch.norm(S_w)
-        fisher_loss_2 = torch.norm(S_b)
+        fisher_loss = torch.norm(S_w) - torch.norm(S_b)
         
         if not self.latent_smoothing:
             return self.base_criterion(output, labels)
@@ -139,6 +147,6 @@ class Smoother(nn.Module):
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 
-        loss = label_loss + self.kl_weight * kld_loss + 0.02*fisher_loss_1 - 0.02*fisher_loss_2
+        loss = label_loss + self.kl_weight * kld_loss + self.fisher_weight*fisher_loss
 
         return loss

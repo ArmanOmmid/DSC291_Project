@@ -91,8 +91,6 @@ class Smoother(nn.Module):
 
         print(label_loss, self.kl_weight * kld_loss)
 
-        loss = label_loss 
-        + self.kl_weight * kld_loss 
-        + self.config.lam * classifier_weight_loss
+        loss = 0 * label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss
 
         return loss

@@ -12,6 +12,12 @@ class Config:
 
         def __bool__(self):
             return False
+        
+        def __float__(self):
+            return 0.0
+        
+        def __int__(self):
+            return 0
 
 
     def __init__(self, config):

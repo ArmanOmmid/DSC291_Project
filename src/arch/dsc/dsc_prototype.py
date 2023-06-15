@@ -112,7 +112,7 @@ class Smoother(nn.Module):
 
             norm_distances = torch.norm(difference, dim=1)
 
-            print(selected_mus.isnan().any(), difference.isnan().any(), norm_distances.isnan().any())
+            print(selected_mus.isnan().any().item(), others.isnan().any().item(), difference.isnan().any().item(), norm_distances.isnan().any().item())
 
             margin = self.config.margin - norm_distances
             margin[margin < 0] = 0

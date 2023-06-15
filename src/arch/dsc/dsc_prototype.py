@@ -111,7 +111,7 @@ class Smoother(nn.Module):
             norm_distances = torch.norm(mu_mean - others, dim=1)
 
             with torch.no_grad():
-                norm_distances.clamp(min=1e-8)
+                norm_distances.clamp(min=1e-2)
 
             margin = self.config.margin - norm_distances
             margin[margin < 0] = 0

@@ -95,7 +95,7 @@ class Smoother(nn.Module):
         # selected_means = self.mu[:, selected_indices]
         # mean = torch.mean(torch.vstack(list(selected_means)), dim=0)
 
-        print(output, labels)
+        _, preds = torch.max(outputs, dim=1)
 
         loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss
 

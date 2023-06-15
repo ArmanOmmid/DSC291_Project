@@ -100,8 +100,6 @@ class Smoother(nn.Module):
             indices = (labels_stacked == c).nonzero().flatten()
             selected_mus = mu_stacked[indices]
 
-            print(selected_mus.isnan().any())
-
             mu_mean = torch.mean(selected_mus, dim=0)
 
             other_indices = (labels_stacked != c).nonzero().flatten()
@@ -113,6 +111,8 @@ class Smoother(nn.Module):
                 difference.clamp(min=1e-2)
 
             norm_distances = torch.norm(difference, dim=1)
+
+            print(selected_mus.isnan().any(), norm_distances.isnan().any())
 
             margin = self.config.margin - norm_distances
             margin[margin < 0] = 0

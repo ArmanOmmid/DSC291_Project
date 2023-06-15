@@ -114,6 +114,8 @@ class Smoother(nn.Module):
             margin[margin < 0] = 0
             margin_loss += torch.sum(margin)
 
+        print(label_loss, kld_loss, margin_loss)
+
         loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss + self.config.margin_weight * margin_loss
 
         return loss

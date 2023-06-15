@@ -113,6 +113,9 @@ class Smoother(nn.Module):
 
             print(mu_mean.isnan().any().item())
 
+            if mu_mean.isnan().any().item():
+                print(mu_mean)
+
             other_indices = (labels_stacked != c).nonzero().flatten()
             others = mu_stacked[other_indices]
 

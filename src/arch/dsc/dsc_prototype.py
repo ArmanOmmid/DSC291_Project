@@ -99,6 +99,9 @@ class Smoother(nn.Module):
         for c in range(self.num_classes):
             indices = (labels_stacked == c).nonzero().flatten()
             selected_mus = mu_stacked[indices]
+
+            print(selected_mus.isnan().any())
+
             mu_mean = torch.mean(selected_mus, dim=0)
 
             other_indices = (labels_stacked != c).nonzero().flatten()

@@ -89,6 +89,8 @@ class Smoother(nn.Module):
 
         classifier_weight_loss = torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2) if float(self.lam) > 0 else 0
 
+        print(label_loss, self.kl_weight * kld_loss)
+
         loss = label_loss 
         + self.kl_weight * kld_loss 
         + self.config.lam * classifier_weight_loss

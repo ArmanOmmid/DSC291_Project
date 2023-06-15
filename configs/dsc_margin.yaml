@@ -8,7 +8,7 @@ kl_weight: 0.0025
 classifier_weight_decay: 0
 margin: 10
 margin_weight: 0
-dropout_rate: 0.2
+dropout_rate: 0.0
 
 # Dataset
 dataset: CIFAR10

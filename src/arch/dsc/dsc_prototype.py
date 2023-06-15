@@ -10,6 +10,7 @@ class Smoother(nn.Module):
         super().__init__()
 
         self.config = config
+        self.num_classes = num_classes
 
         self.base_criterion = nn.CrossEntropyLoss()
 
@@ -95,8 +96,24 @@ class Smoother(nn.Module):
         # selected_means = self.mu[:, selected_indices]
         # mean = torch.mean(torch.vstack(list(selected_means)), dim=0)
 
-        # _, preds = torch.max(outputs, dim=1)
+        labels_stacked = labels.reshape(-1)
+        mu_stacked = torch.vstack(list(self.mu))
 
-        loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss
+        margin_loss = 0
+        for c in range(self.num_classes):
+            indices = (labels_stacked == c).nonzero().flatten()
+            selected_mus = mu_stacked[indices]
+            mu_mean = torch.mean(selected_mus, dim=0)
+
+            other_indices = (labels_stacked != c).nonzero().flatten()
+            others = mu_stacked[other_indices]
+
+            norm_distances = torch.norm(mu_mean - others, dim=1)
+
+            margin = self.margin - norm_distances
+            margin[margin < 0] = 0
+            margin_loss += torch.sum(margin)
+
+        loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss + self.config.margin_weight * margin_loss
 
         return loss

@@ -95,26 +95,28 @@ class Smoother(nn.Module):
         labels_stacked = labels.reshape(-1)
         mu_stacked = torch.vstack(list(self.mu))
 
-        margin_loss = 0
-        for c in range(self.num_classes):
+        if float(self.config.margin_weight) > 0:
+            margin_loss = 0
+            for c in range(self.num_classes):
 
-            indices = (labels_stacked == c).nonzero().flatten()
-            selected_mus = mu_stacked[indices]
+                indices = (labels_stacked == c).nonzero().flatten()
+                selected_mus = mu_stacked[indices]
 
-            if selected_mus.shape[0] == 0: continue
+                if selected_mus.shape[0] == 0: continue
 
-            mu_mean = torch.mean(selected_mus, dim=0)
+                mu_mean = torch.mean(selected_mus, dim=0)
+                edge_distance = torch.max(torch.norm(mu_mean - selected_mus, dim=1))
 
-            other_indices = (labels_stacked != c).nonzero().flatten()
-            others = mu_stacked[other_indices]
+                other_indices = (labels_stacked != c).nonzero().flatten()
+                others = mu_stacked[other_indices]
+                
+                norm_distances = torch.norm(mu_mean - others, dim=1)
 
-            difference = mu_mean - others
-
-            norm_distances = torch.norm(difference, dim=1)
-
-            margin = self.config.margin - norm_distances
-            margin[margin < 0] = 0
-            margin_loss += torch.sum(margin)
+                margin = edge_distance + self.config.margin - norm_distances
+                margin[margin < 0] = 0
+                margin_loss += torch.sum(margin)
+        else:
+            margin_loss = 0
 
         loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss + self.config.margin_weight * margin_loss
 

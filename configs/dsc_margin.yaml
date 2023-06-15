@@ -1,0 +1,26 @@
+# Architecture
+model: dsc_margin
+latent_smoothing: True
+image_size: 32
+hidden_config: [64, 128, 256, 512, 1024]
+latent_dim: 4096
+kl_weight: 0.0025
+classifier_weight_decay: 0
+margin: 10
+margin_weight: 0.0001
+
+# Dataset
+dataset: CIFAR10
+
+# HyperParameters
+epochs: 50
+batch_size: 64
+learning_rate: 0.0001
+weight_decay: 0.0001
+scheduler: True
+num_workers: 1
+weighted_loss: False
+early_stop_tolerance: 10
+
+# Misc
+augment: False

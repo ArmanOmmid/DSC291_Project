@@ -108,10 +108,10 @@ class Smoother(nn.Module):
             other_indices = (labels_stacked != c).nonzero().flatten()
             others = mu_stacked[other_indices]
 
-            norm_distances = torch.norm(mu_mean - others, dim=1)
-
+            difference = mu_mean - others
             with torch.no_grad():
-                norm_distances.clamp(min=1e-2)
+                difference.clamp(min=1e-8)
+            norm_distances = torch.norm(mu_mean - others, dim=1)
 
             margin = self.config.margin - norm_distances
             margin[margin < 0] = 0

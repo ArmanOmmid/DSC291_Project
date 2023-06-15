@@ -106,6 +106,9 @@ class Smoother(nn.Module):
 
             print(mu_mean.isnan().any().item())
 
+            with torch.no_grad():
+                mu_mean += torch.sign(mu_mean) * 1e-6
+
             mu_mean = mu_mean / selected_mus.shape[0]
 
             print(mu_mean.isnan().any().item())

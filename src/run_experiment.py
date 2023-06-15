@@ -185,7 +185,7 @@ def main(args):
 
     """ Optimizer """
     learnable_parameters = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.Adam(learnable_parameters, lr=config.learning_rate, weight_decay=0.001)
+    optimizer = torch.optim.Adam(learnable_parameters, lr=config.learning_rate, weight_decay=config.weight_decay)
 
     """ Learning Rate Scheduler """
     if config.scheduler:

@@ -82,7 +82,7 @@ class Smoother(nn.Module):
         self.base_criterion = criterion
 
     def loss_function(self, output, labels):
-        if not self.latent_smoothing and torch.is_grad_enabled():
+        if not self.latent_smoothing or not torch.is_grad_enabled():
             return self.base_criterion(output, labels)
 
         label_loss = self.base_criterion(output, labels)

@@ -90,7 +90,7 @@ class Smoother(nn.Module):
         mu_value = 0 # self.mu ** 2
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - mu_value - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 
-        classifier_weight_loss = torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2) if float(self.config.lam) > 0 else 0
+        classifier_weight_loss = torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2) if float(self.config.classifier_weight_decay) > 0 else 0
 
         labels_stacked = labels.reshape(-1)
         mu_stacked = torch.vstack(list(self.mu))
@@ -118,6 +118,6 @@ class Smoother(nn.Module):
         else:
             margin_loss = 0
 
-        loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss + self.config.margin_weight * margin_loss
+        loss = label_loss + self.kl_weight * kld_loss + self.config.classifier_weight_decay * classifier_weight_loss + self.config.margin_weight * margin_loss
 
         return loss

@@ -23,4 +23,6 @@ weighted_loss: False
 early_stop_tolerance: 10
 
 # Misc
+debug: 0
+hooks : []
 augment: False

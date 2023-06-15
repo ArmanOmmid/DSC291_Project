@@ -87,8 +87,10 @@ class Smoother(nn.Module):
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + self.log_var - self.mu ** 2 - self.log_var.exp(), dim = 1), dim = 0) # Analytic KL Divergence Loss from isotropic gaussian
 
+        classifier_weight_loss = torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2) if float(self.lam) > 0 else 0
+
         loss = label_loss 
         + self.kl_weight * kld_loss 
-        + self.config.lam * torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2)
+        + self.config.lam * classifier_weight_loss
 
         return loss

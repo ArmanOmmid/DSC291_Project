@@ -102,19 +102,19 @@ class Smoother(nn.Module):
 
             # mu_mean = torch.mean(selected_mus, dim=0)
 
-            mu_mean = torch.sum(selected_mus, dim=0)
+            mu_sum = torch.sum(selected_mus, dim=0)
 
-            print(mu_mean.isnan().any().item())
+            print(mu_sum.isnan().any().item())
 
             with torch.no_grad():
-                mu_mean += torch.sign(mu_mean)
+                mu_sum += torch.sign(mu_sum)
 
-            mu_mean = mu_mean / selected_mus.shape[0]
+            mu_mean = mu_sum / selected_mus.shape[0]
 
             print(mu_mean.isnan().any().item())
 
             if mu_mean.isnan().any().item():
-                print(mu_mean)
+                print(mu_sum)
                 print(selected_mus.shape[0])
 
             other_indices = (labels_stacked != c).nonzero().flatten()

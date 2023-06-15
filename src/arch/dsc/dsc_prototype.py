@@ -99,7 +99,7 @@ class Smoother(nn.Module):
         labels_stacked = labels.reshape(-1)
         mu_stacked = torch.vstack(list(self.mu))
 
-        margin_loss = 1
+        margin_loss = 1 / self.config.margin
         for c in range(self.num_classes):
             indices = (labels_stacked == c).nonzero().flatten()
             selected_mus = mu_stacked[indices]

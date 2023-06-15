@@ -92,10 +92,6 @@ class Smoother(nn.Module):
 
         classifier_weight_loss = torch.sum(torch.norm(self.decoder.weight, dim=1) ** 2) if float(self.config.lam) > 0 else 0
 
-        # selected_indices = 
-        # selected_means = self.mu[:, selected_indices]
-        # mean = torch.mean(torch.vstack(list(selected_means)), dim=0)
-
         labels_stacked = labels.reshape(-1)
         mu_stacked = torch.vstack(list(self.mu))
 
@@ -118,8 +114,8 @@ class Smoother(nn.Module):
             margin[margin < 0] = 0
             margin_loss += torch.sum(margin)
 
-        # print(label_loss.item(), kld_loss.item(), margin_loss.item())
-        # print(label_loss.item(), self.kl_weight * kld_loss.item(), self.config.margin_weight * margin_loss.item())
+        print(label_loss.item(), kld_loss.item(), margin_loss.item())
+        print(label_loss.item(), self.kl_weight * kld_loss.item(), self.config.margin_weight * margin_loss.item())
 
         loss = label_loss + self.kl_weight * kld_loss + self.config.lam * classifier_weight_loss + self.config.margin_weight * margin_loss
 

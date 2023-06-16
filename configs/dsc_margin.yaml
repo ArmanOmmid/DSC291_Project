@@ -8,7 +8,9 @@ kl_weight: 0.0
 classifier_weight_decay: 0
 margin: 10
 margin_weight: 0
-dropout_rate: 0.0
+fisher_weight_w: 0.00000001
+fisher_weight_b: 0.00000001
+dropout_rate: 0.2
 
 # Dataset
 dataset: CIFAR10

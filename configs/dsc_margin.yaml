@@ -10,7 +10,7 @@ margin: 10
 margin_weight: 0
 fisher_weight_w: 0.00000001
 fisher_weight_b: 0.00000001
-dropout_rate: 0.2
+dropout_rate: 0.0
 
 # Dataset
 dataset: CIFAR10

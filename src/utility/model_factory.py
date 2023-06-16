@@ -32,7 +32,6 @@ def build_model(config, classes):
 
     class_count = classes if isinstance(classes, int) else len(classes)
 
-                                   
     if config.model == 'dsc_arch':
         model = arch.dsc_arch.Smoother(num_classes=class_count, config=config)
     elif config.model == 'dsc_prototype':

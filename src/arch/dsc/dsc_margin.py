@@ -141,7 +141,7 @@ class Smoother(nn.Module):
         else:
             margin_loss = 0
             
-        if float(self.config.fisher_weight) > 0:
+        if float(self.config.fisher_weight_w) > 0 or float(self.config.fisher_weight_b) > 0:
             # --- Fisher Loss ---
             num_classes = output.shape[1]
             z_bar = torch.mean(self.z) # shape [latent_dim]
@@ -159,11 +159,12 @@ class Smoother(nn.Module):
                 prod = expanded_diff @ expanded_diff.transpose(0,1)
                 S_w += prod
 
-            fisher_loss = torch.norm(S_w) - torch.norm(S_b)
+            fisher_loss_w = torch.norm(S_w)
+            fisher_loss_b = - torch.norm(S_b)
         else:
             fisher_loss = 0
 
-        loss = label_loss + self.kl_weight * kld_loss + self.config.classifier_weight_decay * classifier_weight_loss + self.config.margin_weight * margin_loss + self.config.fisher_weight*fisher_loss
+        loss = label_loss + self.kl_weight * kld_loss + self.config.classifier_weight_decay * classifier_weight_loss + self.config.margin_weight * margin_loss + self.config.fisher_weight_w*fisher_loss_w + self.config.fisher_weight_b*fisher_loss_b
         
         #print(self.config.fisher_weight*fisher_loss / loss)
 
